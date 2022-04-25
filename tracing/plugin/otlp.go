@@ -156,7 +156,6 @@ func newTracer(ic *plugin.InitContext) (io.Closer, error) {
 		return nil, fmt.Errorf("failed to get tracing processors: %w", err)
 	}
 
-	procs := make([]sdktrace.SpanProcessor, 0, len(ls))
 	for id, pctx := range ls {
 		p, err := pctx.Instance()
 		if err != nil {
@@ -165,7 +164,6 @@ func newTracer(ic *plugin.InitContext) (io.Closer, error) {
 		}
 		proc := p.(sdktrace.SpanProcessor)
 		opts = append(opts, sdktrace.WithSpanProcessor(proc))
-		procs = append(procs, proc)
 	}
 
 	provider := sdktrace.NewTracerProvider(opts...)
@@ -174,11 +172,8 @@ func newTracer(ic *plugin.InitContext) (io.Closer, error) {
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return &closer{close: func() error {
-		for _, p := range procs {
-			if err := p.Shutdown(ctx); err != nil {
-				return err
-			}
-		}
-		return nil
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return provider.Shutdown(ctx)
 	}}, nil
 }
