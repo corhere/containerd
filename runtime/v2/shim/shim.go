@@ -35,6 +35,7 @@ import (
 	"github.com/containerd/containerd/pkg/shutdown"
 	"github.com/containerd/containerd/plugin"
 	shimapi "github.com/containerd/containerd/runtime/v2/task"
+	traceplugin "github.com/containerd/containerd/tracing/plugin"
 	"github.com/containerd/containerd/version"
 	"github.com/containerd/ttrpc"
 	"github.com/gogo/protobuf/proto"
@@ -371,7 +372,8 @@ func run(ctx context.Context, manager Manager, initFunc Init, name string, confi
 	plugins := plugin.Graph(func(*plugin.Registration) bool { return false })
 	for _, p := range plugins {
 		id := p.URI()
-		log.G(ctx).WithField("type", p.Type).Infof("loading plugin %q...", id)
+		ll := log.G(ctx).WithField("type", p.Type).WithField("id", id)
+		ll.Infof("loading plugin...")
 
 		initContext := plugin.NewContext(
 			ctx,
@@ -397,6 +399,17 @@ func run(ctx context.Context, manager Manager, initFunc Init, name string, confi
 		//	initContext.Config = pc
 		//}
 
+		// FIXME: ugly hack.
+		switch pc := p.Config.(type) {
+		case *traceplugin.OTLPConfig:
+			pc.Endpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+			pc.Protocol = os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
+		case *traceplugin.TraceConfig:
+			pc.ServiceName = "containerd-shim"
+			ll.Info("TraceConfig: %#v", pc)
+		}
+		initContext.Config = p.Config
+
 		result := p.Init(initContext)
 		if err := initialized.Add(result); err != nil {
 			return fmt.Errorf("could not add plugin result to plugin set: %w", err)
@@ -405,15 +418,25 @@ func run(ctx context.Context, manager Manager, initFunc Init, name string, confi
 		instance, err := result.Instance()
 		if err != nil {
 			if plugin.IsSkipPlugin(err) {
-				log.G(ctx).WithError(err).WithField("type", p.Type).Infof("skip loading plugin %q...", id)
+				ll.Infof("skip loading plugin")
 			} else {
-				log.G(ctx).WithError(err).Warnf("failed to load plugin %s", id)
+				ll.WithError(err).Warnf("failed to load plugin")
 			}
 			continue
 		}
 
+		if closer, ok := instance.(io.Closer); ok {
+			ll := ll
+			defer func() {
+				ll.Info("closing plugin...")
+				if err := closer.Close(); err != nil {
+					ll.WithError(err).Error("failed to close plugin")
+				}
+			}()
+		}
+
 		if src, ok := instance.(ttrpcService); ok {
-			logrus.WithField("id", id).Debug("registering ttrpc service")
+			ll.Debug("registering ttrpc service")
 			ttrpcServices = append(ttrpcServices, src)
 		}
 	}

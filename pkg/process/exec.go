@@ -172,6 +172,9 @@ func (e *execProcess) Start(ctx context.Context) error {
 }
 
 func (e *execProcess) start(ctx context.Context) (err error) {
+	ctx, span := tracer.Start(ctx, "(*execProcess).start")
+	defer span.End()
+
 	// The reaper may receive exit signal right after
 	// the container is started, before the e.pid is updated.
 	// In that case, we want to block the signal handler to
@@ -205,7 +208,11 @@ func (e *execProcess) start(ctx context.Context) (err error) {
 	if socket != nil {
 		opts.ConsoleSocket = socket
 	}
-	if err := e.parent.runtime.Exec(ctx, e.parent.id, e.spec, opts); err != nil {
+
+	ectx, espan := tracer.Start(ctx, "e.parent.runtime.Exec")
+	err = e.parent.runtime.Exec(ectx, e.parent.id, e.spec, opts)
+	espan.End()
+	if err != nil {
 		close(e.waitBlock)
 		return e.parent.runtimeError(err, "OCI runtime exec failed")
 	}
@@ -231,7 +238,7 @@ func (e *execProcess) start(ctx context.Context) (err error) {
 	}
 	pid, err := pidFile.Read()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve OCI runtime exec pi: %wd", err)
+		return fmt.Errorf("failed to retrieve OCI runtime exec pid: %w", err)
 	}
 	e.pid.pid = pid
 	return nil

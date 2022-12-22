@@ -165,7 +165,7 @@ func (s *createdCheckpointState) Start(ctx context.Context) error {
 		return p.runtimeError(err, "OCI runtime restore failed")
 	}
 	if sio.Stdin != "" {
-		if err := p.openStdin(sio.Stdin); err != nil {
+		if err := p.openStdin(ctx, sio.Stdin); err != nil {
 			return fmt.Errorf("failed to open stdin fifo %s: %w", sio.Stdin, err)
 		}
 	}

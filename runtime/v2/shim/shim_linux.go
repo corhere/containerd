@@ -19,10 +19,15 @@ package shim
 import (
 	"github.com/containerd/containerd/sys/reaper"
 	"github.com/containerd/ttrpc"
+	"github.com/containerd/ttrpc/contrib/otelttrpc"
 )
 
 func newServer() (*ttrpc.Server, error) {
-	return ttrpc.NewServer(ttrpc.WithServerHandshaker(ttrpc.UnixSocketRequireSameUser()))
+	return ttrpc.NewServer(
+		ttrpc.WithServerHandshaker(ttrpc.UnixSocketRequireSameUser()),
+		// FIXME: break out into platform-agnostic options.
+		ttrpc.WithUnaryServerInterceptor(otelttrpc.UnaryServerInterceptor()),
+	)
 }
 
 func subreaper() error {

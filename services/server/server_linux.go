@@ -64,6 +64,8 @@ func apply(ctx context.Context, config *srvconfig.Config) error {
 	return nil
 }
 
-func newTTRPCServer() (*ttrpc.Server, error) {
-	return ttrpc.NewServer(ttrpc.WithServerHandshaker(ttrpc.UnixSocketRequireSameUser()))
+func ttrpcServerPlatformOpts() []ttrpc.ServerOpt {
+	return []ttrpc.ServerOpt{
+		ttrpc.WithServerHandshaker(ttrpc.UnixSocketRequireSameUser()),
+	}
 }

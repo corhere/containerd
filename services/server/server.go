@@ -52,6 +52,7 @@ import (
 	ssproxy "github.com/containerd/containerd/snapshots/proxy"
 	"github.com/containerd/containerd/sys"
 	"github.com/containerd/ttrpc"
+	"github.com/containerd/ttrpc/contrib/otelttrpc"
 	metrics "github.com/docker/go-metrics"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -141,6 +142,8 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 			grpc.UnaryServerInterceptor(grpc_prometheus.UnaryServerInterceptor),
 			unaryNamespaceInterceptor,
 		)),
+		grpc.ReadBufferSize(0),
+		grpc.WriteBufferSize(0),
 	}
 	if config.GRPC.MaxRecvMsgSize > 0 {
 		serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(config.GRPC.MaxRecvMsgSize))
@@ -148,7 +151,10 @@ func New(ctx context.Context, config *srvconfig.Config) (*Server, error) {
 	if config.GRPC.MaxSendMsgSize > 0 {
 		serverOpts = append(serverOpts, grpc.MaxSendMsgSize(config.GRPC.MaxSendMsgSize))
 	}
-	ttrpcServer, err := newTTRPCServer()
+	ttrpcServer, err := ttrpc.NewServer(append(
+		ttrpcServerPlatformOpts(),
+		ttrpc.WithUnaryServerInterceptor(otelttrpc.UnaryServerInterceptor()),
+	)...)
 	if err != nil {
 		return nil, err
 	}

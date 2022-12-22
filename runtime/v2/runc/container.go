@@ -39,10 +39,18 @@ import (
 	"github.com/containerd/containerd/runtime/v2/task"
 	"github.com/containerd/typeurl"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var tracer = otel.Tracer("github.com/containerd/containerd/runtime/v2/runc")
 
 // NewContainer returns a new runc container
 func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTaskRequest) (_ *Container, retErr error) {
+	ctx, span := tracer.Start(ctx, "NewContainer", trace.WithAttributes(attribute.String("containerd.container.id", r.ID)))
+	defer span.End()
+
 	ns, err := namespaces.NamespaceRequired(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create namespace: %w", err)
@@ -100,8 +108,10 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 	}
 	defer func() {
 		if retErr != nil {
+			ctx, span := tracer.Start(ctx, "UnmountAll")
+			defer span.End()
 			if err := mount.UnmountAll(rootfs, 0); err != nil {
-				logrus.WithError(err).Warn("failed to cleanup rootfs mount")
+				logrus.WithContext(ctx).WithError(err).Warn("failed to cleanup rootfs mount")
 			}
 		}
 	}()
@@ -111,9 +121,15 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 			Source:  rm.Source,
 			Options: rm.Options,
 		}
+		_, span := tracer.Start(ctx, "Mount", trace.WithAttributes(
+			attribute.String("mount.type", m.Type),
+			attribute.String("mount.source", m.Source),
+		))
 		if err := m.Mount(rootfs); err != nil {
+			span.End()
 			return nil, fmt.Errorf("failed to mount rootfs component %v: %w", m, err)
 		}
+		span.End()
 	}
 
 	p, err := newInit(

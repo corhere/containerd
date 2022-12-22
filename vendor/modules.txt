@@ -117,9 +117,11 @@ github.com/containerd/imgcrypt/images/encryption
 ## explicit; go 1.14
 github.com/containerd/nri
 github.com/containerd/nri/types/v1
-# github.com/containerd/ttrpc v1.1.0
+# github.com/containerd/ttrpc v1.1.0 => ../ttrpc
 ## explicit; go 1.13
 github.com/containerd/ttrpc
+github.com/containerd/ttrpc/contrib/otelttrpc
+github.com/containerd/ttrpc/contrib/otelttrpc/internal
 github.com/containerd/ttrpc/plugin
 # github.com/containerd/typeurl v1.0.3-0.20220324183432-6193a0e03259
 ## explicit; go 1.13
@@ -245,8 +247,8 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
-# github.com/google/go-cmp v0.5.6
-## explicit; go 1.8
+# github.com/google/go-cmp v0.5.7
+## explicit; go 1.11
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -398,7 +400,7 @@ github.com/spf13/pflag
 # github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980
 ## explicit
 github.com/stefanberger/go-pkcs11uri
-# github.com/stretchr/testify v1.7.0
+# github.com/stretchr/testify v1.7.1
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
@@ -769,3 +771,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # github.com/urfave/cli => github.com/urfave/cli v1.22.1
 # google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63
+# github.com/containerd/ttrpc => ../ttrpc

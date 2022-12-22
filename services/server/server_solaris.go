@@ -25,3 +25,7 @@ import (
 func apply(_ context.Context, _ *srvconfig.Config) error {
 	return nil
 }
+
+func ttrpcServerPlatformOpts() []ttrpc.ServerOpt {
+	return nil
+}

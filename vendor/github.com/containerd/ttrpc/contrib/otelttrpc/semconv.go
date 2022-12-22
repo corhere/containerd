@@ -1,8 +1,6 @@
-//go:build !linux && !windows && !solaris
-// +build !linux,!windows,!solaris
-
 /*
    Copyright The containerd Authors.
+   Copyright The OpenTelemetry Authors.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,21 +13,23 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+   Based on go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc.
 */
 
-package server
+package otelttrpc
 
 import (
-	"context"
-
-	srvconfig "github.com/containerd/containerd/services/server/config"
-	"github.com/containerd/ttrpc"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
-func apply(_ context.Context, _ *srvconfig.Config) error {
-	return nil
-}
+// Semantic conventions for ttrpc attributes.
+var (
+	// Semantic convention for ttrpc as the remoting system.
+	RPCSystemTTRPC = semconv.RPCSystemKey.String("ttrpc")
 
-func ttrpcServerPlatformOpts() []ttrpc.ServerOpt {
-	return nil
-}
+	// TTRPCStatusCodeKey is the ttrpc analogue of gRPC convention for
+	// numeric status code of a ttrpc request.
+	TTRPCStatusCodeKey = attribute.Key("rpc.ttrpc.status_code")
+)

@@ -27,6 +27,6 @@ func apply(_ context.Context, _ *srvconfig.Config) error {
 	return nil
 }
 
-func newTTRPCServer() (*ttrpc.Server, error) {
-	return ttrpc.NewServer()
+func ttrpcServerPlatformOpts() []ttrpc.ServerOpt {
+	return nil
 }

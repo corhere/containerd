@@ -40,6 +40,7 @@ import (
 	shimapi "github.com/containerd/containerd/runtime/v1/shim/v1"
 	"github.com/containerd/containerd/sys"
 	"github.com/containerd/ttrpc"
+	"github.com/containerd/ttrpc/contrib/otelttrpc"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/sirupsen/logrus"
 	exec "golang.org/x/sys/execabs"
@@ -316,7 +317,10 @@ func WithConnect(address string, onClose func()) Opt {
 		if err != nil {
 			return nil, nil, err
 		}
-		client := ttrpc.NewClient(conn, ttrpc.WithOnClose(onClose))
+		client := ttrpc.NewClient(conn,
+			ttrpc.WithOnClose(onClose),
+			ttrpc.WithUnaryClientInterceptor(otelttrpc.UnaryClientInterceptor()),
+		)
 		return shimapi.NewShimClient(client), conn, nil
 	}
 }

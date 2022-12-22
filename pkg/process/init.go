@@ -38,8 +38,11 @@ import (
 	runc "github.com/containerd/go-runc"
 	google_protobuf "github.com/gogo/protobuf/types"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/sys/unix"
 )
+
+var tracer = otel.Tracer("github.com/containerd/containerd/pkg/process")
 
 // Init represents an initial process for a container
 type Init struct {
@@ -109,6 +112,9 @@ func New(id string, runtime *runc.Runc, stdio stdio.Stdio) *Init {
 
 // Create the process with the provided config
 func (p *Init) Create(ctx context.Context, r *CreateConfig) error {
+	ctx, span := tracer.Start(ctx, "process.(*Init).Create")
+	defer span.End()
+
 	var (
 		err     error
 		socket  *runc.Socket
@@ -141,11 +147,14 @@ func (p *Init) Create(ctx context.Context, r *CreateConfig) error {
 	if socket != nil {
 		opts.ConsoleSocket = socket
 	}
-	if err := p.runtime.Create(ctx, r.ID, r.Bundle, opts); err != nil {
+	rctx, rspan := tracer.Start(ctx, "p.runtime.Create")
+	if err := p.runtime.Create(rctx, r.ID, r.Bundle, opts); err != nil {
+		rspan.End()
 		return p.runtimeError(err, "OCI runtime create failed")
 	}
+	rspan.End()
 	if r.Stdin != "" {
-		if err := p.openStdin(r.Stdin); err != nil {
+		if err := p.openStdin(ctx, r.Stdin); err != nil {
 			return err
 		}
 	}
@@ -174,8 +183,10 @@ func (p *Init) Create(ctx context.Context, r *CreateConfig) error {
 	return nil
 }
 
-func (p *Init) openStdin(path string) error {
-	sc, err := fifo.OpenFifo(context.Background(), path, unix.O_WRONLY|unix.O_NONBLOCK, 0)
+func (p *Init) openStdin(ctx context.Context, path string) error {
+	ctx, span := tracer.Start(ctx, "process.(*Init).openStdin")
+	defer span.End()
+	sc, err := fifo.OpenFifo(ctx, path, unix.O_WRONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return fmt.Errorf("failed to open stdin fifo %s: %w", path, err)
 	}
